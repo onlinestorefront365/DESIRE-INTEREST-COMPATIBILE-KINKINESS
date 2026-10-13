@@ -28,7 +28,7 @@
 // IMPORTANT: the code people swap encodes answers by position in this file.
 // Any reorder, removal or insertion must bump BANK_VERSION.
 
-export const BANK_VERSION = 2;
+export const BANK_VERSION = 3;
 
 export const SCALE = [
   { value: 4, label: "Love it", hint: "Yes, please" },
@@ -167,14 +167,16 @@ export const CATEGORIES = [
         { gate: "ocontrol", topRole: "edges", bottomRole: "is edged" }),
       pair("deny", "Orgasm denial", "Denying your partner an orgasm", "Being denied an orgasm",
         { gate: "ocontrol", topRole: "denies", bottomRole: "is denied" }),
-      pair("permit", "Permission to come", "Deciding when your partner is allowed to come", "Coming only when your partner allows it",
-        { gate: "ocontrol", topRole: "decides", bottomRole: "waits" }),
+      pair("permit", "Permission to cum", "Making your partner ask permission to cum", "Having to ask permission to cum",
+        { gate: "ocontrol", topRole: "grants", bottomRole: "asks" }),
+      pair("command", "Cumming on command", "Telling your partner exactly when to cum", "Cumming on your partner's command",
+        { gate: "ocontrol", topRole: "commands", bottomRole: "cums on cue" }),
       pair("ruin", "Ruined orgasms", "Ruining your partner's orgasm on purpose", "Having your orgasm ruined on purpose",
         { gate: "ocontrol" }),
       pair("chastity", "Chastity", "Holding the key to your partner's chastity device", "Wearing a chastity device",
         { gate: "ocontrol", topRole: "keyholder", bottomRole: "wearer" }),
-      pair("forced", "Forced orgasms", "Making your partner come again and again", "Being made to come again and again"),
-      pair("overstim", "Overstimulation", "Keeping going after your partner comes", "Being kept going after you come"),
+      pair("forced", "Forced orgasms", "Making your partner cum again and again", "Being made to cum again and again"),
+      pair("overstim", "Overstimulation", "Keeping going after your partner cums", "Being kept going after you cum"),
       pair("squirt", "Squirting", "Making your partner squirt", "Squirting",
         { bb: "v", topRole: "makes it happen", bottomRole: "squirts" }),
     ],
@@ -429,14 +431,14 @@ export const CATEGORIES = [
     id: "fluids",
     name: "Fluids and body",
     items: [
-      pair("inside", "Coming inside", "Coming inside your partner", "Your partner coming inside you", { tb: "p" }),
+      pair("inside", "Cumming inside", "Cumming inside your partner", "Your partner cumming inside you", { tb: "p" }),
       pair("spit", "Spitting", "Spitting on your partner or in their mouth", "Being spat on or in your mouth",
         { topRole: "spits", bottomRole: "is spat on" }),
-      solo("cumplay", "Cum play", "Cum play: facials, swallowing, coming on each other", { screener: true, any: "p" }),
-      pair("facial", "Facials", "Coming on your partner's face", "Being come on, on your face", { gate: "cumplay", tb: "p" }),
-      pair("cumbody", "Coming on the body", "Coming on your partner's body", "Being come on, on your body", { gate: "cumplay", tb: "p" }),
+      solo("cumplay", "Cum play", "Cum play: facials, swallowing, cumming on each other", { screener: true, any: "p" }),
+      pair("facial", "Facials", "Cumming on your partner's face", "Getting cum on your face", { gate: "cumplay", tb: "p" }),
+      pair("cumbody", "Cumming on the body", "Cumming on your partner's body", "Getting cum on your body", { gate: "cumplay", tb: "p" }),
       pair("swallow", "Swallowing", "Your partner swallowing your cum", "Swallowing your partner's cum",
-        { gate: "cumplay", tb: "p", topRole: "comes", bottomRole: "swallows" }),
+        { gate: "cumplay", tb: "p", topRole: "cums", bottomRole: "swallows" }),
       solo("snowball", "Snowballing", "Sharing cum by kissing (snowballing)", { gate: "cumplay", any: "p" }),
       solo("pee", "Pee and scat", "Pee or scat play of any kind", { screener: true }),
       pair("golden", "Golden showers", "Peeing on your partner", "Being peed on",
