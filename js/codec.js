@@ -57,9 +57,11 @@ export class CodeError extends Error {}
 export function decode(raw) {
   const code = String(raw || "").trim().replace(/\s+/g, "");
   if (!code.startsWith(PREFIX)) throw new CodeError("That doesn't look like a SyncPulse code. Codes start with SP1-.");
+  const body = code.slice(PREFIX.length);
+  if (!/^[A-Za-z0-9_-]+$/.test(body)) throw new CodeError("The code has characters that don't belong in it. Copy it again in full.");
   let bytes;
-  try { bytes = fromBase64Url(code.slice(PREFIX.length)); }
-  catch { throw new CodeError("The code has characters that don't belong in it. Copy it again in full."); }
+  try { bytes = fromBase64Url(body); }
+  catch { throw new CodeError("The code is cut off. Copy it again in full."); }
   if (bytes.length < 4) throw new CodeError("The code is cut off. Copy it again in full.");
 
   const sum = bytes.slice(0, -1).reduce((s, b) => (s + b) & 0xff, 0);

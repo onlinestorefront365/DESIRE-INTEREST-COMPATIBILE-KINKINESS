@@ -13,7 +13,7 @@ There is no server and no account. Answers are saved only in the browser on each
    After the first visit it works offline.
 2. Enter a name, your body and your partner's body. These settings only hide questions that can't apply to the two of you.
 3. Answer each question with one tap. **Back** goes to the previous question. Progress saves as you go, so you can stop and come back.
-4. Each section starts with a choice to answer it or skip it. Skipping counts every question in that section as a hard no.
+4. Broad questions come first. A Hard no on one skips the narrower questions under it, so if you say Hard no to "Having anything anal done to you," you're never asked about being pegged. The giving side is still asked unless you rule that out too. Hesitant or higher asks the narrower questions.
 5. When you're done, copy your code and text it to your partner. Paste their code and tap **Compare answers**.
 
 If either of you changes an answer, send a new code.
@@ -34,6 +34,7 @@ If either of you changes an answer, send a new code.
   | One into it, the other Hesitant | 25% |
   | One into it, the other Hard no | Conflict (0%) |
 
+- **Screened-out questions** (skipped because of a Hard no on the broad question above them) are sent to your partner as "Screened out" and scored as Hard no.
 - **Mutual no's don't count.** If neither of you is above Neutral, that comparison is left out of the score. Mutual hard no's are listed as shared limits.
 - **Results show:**
   - the overall score and a score for each section
@@ -53,7 +54,7 @@ Consensual non-consent appears only as a scene you plan together in advance. The
 | Path | What it is |
 |---|---|
 | `index.html`, `css/`, `js/app.js` | The app |
-| `js/questions.js` | The question bank (see the note at the top before editing) |
+| `js/questions.js` | The question bank, including which broad questions screen out which follow-ups (see the note at the top before editing) |
 | `js/scoring.js` | Compatibility scoring |
 | `js/codec.js` | Packs answers into the swap code |
 | `sw.js`, `manifest.webmanifest`, `icons/` | Offline support and home-screen install |

@@ -4,7 +4,7 @@ import { classify, compare } from "../js/scoring.js";
 import { CATEGORIES, PROMPTS, promptApplies } from "../js/questions.js";
 
 const person = (name, answers) => ({ name, answers });
-const dom = (v) => ({ "dom:t": v[0], "dom:b": v[1] });
+const dom = (v) => ({ "control:t": v[0], "control:b": v[1] });
 
 const domScore = (a, b) => {
   const r = compare(person("A", a), person("B", b));
@@ -29,7 +29,7 @@ test("two submissives are a mismatch", () => {
 
 test("dominant + switch: one direction works, the other is a conflict", () => {
   const r = compare(person("A", dom([4, 0])), person("B", dom([4, 4])));
-  const kinds = r.units.filter((u) => u.item.id === "dom").map((u) => u.kind).sort();
+  const kinds = r.units.filter((u) => u.item.id === "control").map((u) => u.kind).sort();
   assert.deepEqual(kinds, ["conflict", "match"]);
 });
 

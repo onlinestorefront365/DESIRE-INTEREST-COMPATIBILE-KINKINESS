@@ -1,6 +1,6 @@
 // Offline support. Caches the app's own files; never touches answers,
 // which live only in this browser's localStorage.
-const CACHE = "syncpulse-v1";
+const CACHE = "syncpulse-v2";
 const FILES = [
   "./",
   "index.html",

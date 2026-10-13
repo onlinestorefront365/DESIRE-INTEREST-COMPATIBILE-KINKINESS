@@ -1,4 +1,7 @@
-import { CATEGORIES, CATEGORY_BY_ID, PROMPTS, SCALE, LABELS, promptApplies } from "./questions.js";
+import {
+  CATEGORY_BY_ID, SCALE, LABELS, promptApplies,
+  livePrompts, effectiveAnswers as computeEffective, followUpsSkippedBy,
+} from "./questions.js";
 import { compare, unitParties } from "./scoring.js";
 import { encode, decode, CodeError } from "./codec.js";
 
@@ -7,13 +10,15 @@ const app = document.getElementById("app");
 
 // ---------- state ----------
 
-const blank = () => ({ name: "", self: null, partner: null, answers: {}, skipped: {}, at: null, partnerCode: "" });
+const blank = () => ({ name: "", self: null, partner: null, answers: {}, at: null, partnerCode: "" });
 
 function load() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
     if (!raw) return blank();
-    return { ...blank(), ...JSON.parse(raw) };
+    const { skipped, ...saved } = JSON.parse(raw); // "skipped" was the old per-section skip
+    void skipped;
+    return { ...blank(), ...saved };
   } catch {
     return blank();
   }
@@ -33,34 +38,22 @@ function save() {
 const isSetUp = () => state.self && state.partner;
 const applies = (p) => promptApplies(p, state.self, state.partner);
 
+// Questions are asked in bank order. A Hard no on a broad screener question
+// removes its narrower follow-ups from the list, so the list is rebuilt from
+// the current answers every time.
 function buildSteps() {
-  const steps = [];
-  const active = CATEGORIES.filter((c) => PROMPTS.some((p) => p.cat === c.id && applies(p)));
-  active.forEach((cat, i) => {
-    const qs = PROMPTS.filter((p) => p.cat === cat.id && applies(p));
-    steps.push({ id: `gate:${cat.id}`, type: "gate", cat, count: qs.length, n: i + 1, of: active.length });
-    if (!state.skipped[cat.id]) for (const p of qs) steps.push({ id: p.key, type: "q", prompt: p, cat });
-  });
-  return steps;
+  return livePrompts(state.answers, applies).map((p) => ({ id: p.key, prompt: p, cat: CATEGORY_BY_ID[p.cat] }));
 }
 
-function effectiveAnswers() {
-  const out = {};
-  for (const p of PROMPTS) {
-    if (!applies(p)) continue;
-    if (state.skipped[p.cat]) out[p.key] = "skip";
-    else if (state.answers[p.key] !== undefined) out[p.key] = state.answers[p.key];
-  }
-  return out;
-}
+const effectiveAnswers = () => computeEffective(state.answers, applies);
 
 function progress() {
-  const live = PROMPTS.filter((p) => applies(p) && !state.skipped[p.cat]);
+  const live = livePrompts(state.answers, applies);
   const answered = live.filter((p) => state.answers[p.key] !== undefined).length;
   return { answered, total: live.length, open: live.length - answered };
 }
 
-const hasStarted = () => Object.keys(state.answers).length > 0 || Object.keys(state.skipped).length > 0;
+const hasStarted = () => Object.keys(state.answers).length > 0;
 
 function myCode() {
   return encode({ name: state.name, self: state.self, partner: state.partner, answers: effectiveAnswers(), applies });
@@ -139,7 +132,7 @@ function viewHome() {
       <p class="lede">Answer privately on your own phone, swap codes, and see where your desires line up.</p>
     </div>
     <p class="notice mt-28"><strong>Your partner sees every answer.</strong> Results show both of your answers side by side.</p>
-    <p class="small mt-14">Nothing leaves this phone except the code you choose to send. Sections you're not into can be skipped in one tap.</p>
+    <p class="small mt-14">Nothing leaves this phone except the code you choose to send. Broad questions come first: say Hard no to one and the narrower questions under it are skipped.</p>
     <div class="spacer"></div>
     <div class="btn-row mt-32">${actions}</div>
     ${isSetUp() ? `<div class="foot">
@@ -191,41 +184,29 @@ function viewQuiz() {
   const step = steps[i];
   state.at = step.id;
 
-  const prog = progress();
-  const qIndex = steps.slice(0, i).filter((s) => s.type === "q").length;
-  const fraction = prog.total ? Math.min(1, qIndex / prog.total) : 0;
+  const total = steps.length;
+  const fraction = total ? i / total : 0;
   const top = `
     <div class="quiz-top">
       <button class="btn btn-text" data-action="back">Back</button>
-      <span class="count">${step.type === "q" ? `${qIndex + 1} of ${prog.total}` : `Section ${step.n} of ${step.of}`}</span>
+      <span class="count">${i + 1} of ${total}</span>
     </div>
     <div class="progress" aria-hidden="true"><svg viewBox="0 0 100 3" preserveAspectRatio="none"><rect x="0" y="0" height="3" width="${(fraction * 100).toFixed(2)}"/></svg></div>`;
-
-  if (step.type === "gate") {
-    const skipped = !!state.skipped[step.cat.id];
-    return `${top}
-      <section class="gate">
-        <p class="section-name">Section ${step.n} of ${step.of}</p>
-        <h2>${esc(step.cat.name)}</h2>
-        <p class="lede">${esc(step.cat.blurb)}</p>
-        <p class="small mt-12">${step.count} questions${skipped ? ". You skipped this section." : ""}</p>
-      </section>
-      <div class="btn-row">
-        <button class="btn btn-primary" data-action="gate-open">${skipped ? "Answer these after all" : "Show me these"}</button>
-        <button class="btn btn-quiet" data-action="gate-skip">${skipped ? "Keep it skipped" : "Skip this section"}</button>
-      </div>
-      <p class="small mt-12">Skipping counts every question here as a hard no.</p>`;
-  }
 
   const p = step.prompt;
   const current = state.answers[p.key];
   const sideText = p.side === "solo" ? "Together" : p.side === "top" ? "Two-sided: this role first" : "Two-sided: now the other role";
+  const skips = followUpsSkippedBy(p, state.answers, applies);
+  const screenerNote = skips
+    ? `<p class="screener-note">Hard no skips the ${skips} narrower ${skips === 1 ? "question" : "questions"} under this one.</p>`
+    : "";
   return `${top}
     <section class="prompt-area">
       <p class="section-name">${esc(step.cat.name)}</p>
       <span class="side">${SIDE_ICON}${sideText}</span>
       <p class="prompt" id="prompt">${esc(p.text)}</p>
       ${p.item.hint ? `<p class="prompt-hint">${esc(p.item.hint)}</p>` : ""}
+      ${screenerNote}
     </section>
     <div class="answers" role="group" aria-labelledby="prompt">
       ${SCALE.map((s) => `
@@ -275,7 +256,7 @@ function viewDone() {
 const expanded = new Set();
 
 function lvChip(v) {
-  if (v === "skip") return `<span class="lv lv-skip">Skipped</span>`;
+  if (v === "skip") return `<span class="lv lv-skip">Screened out</span>`;
   if (v === undefined || v === null) return `<span class="lv lv-na">No answer</span>`;
   return `<span class="lv lv-${v}">${LABELS[v]}</span>`;
 }
@@ -394,9 +375,9 @@ function viewResults() {
       </section>
       ${listBlock("matches", "You both want", "Both of you said Into it or Love it.", r.matches, names)}
       ${listBlock("talk", "Worth talking about", "One of you is into it, the other is neutral or hesitant.", r.talk, names)}
-      ${listBlock("conflicts", "Conflicts", "One of you is into it, the other said hard no or skipped the section.", r.conflicts, names)}
+      ${listBlock("conflicts", "Conflicts", "One of you is into it, the other said hard no or screened it out.", r.conflicts, names)}
       ${r.limits.length ? `<section class="stack"><div class="block-title"><h3>Shared limits</h3><span class="small">${r.limits.length}</span></div>
-        <p class="small">Both of you said hard no. These don't count toward the score.</p>
+        <p class="small">Both of you said hard no or screened it out. These don't count toward the score.</p>
         <details><summary>Show shared limits</summary><ul class="rows">${r.limits.map((u) => unitRow(u, names, true)).join("")}</ul></details></section>` : ""}
       <section class="stack" id="all">
         <h3>Every answer, side by side</h3>
@@ -453,7 +434,7 @@ function answer(v) {
   const steps = buildSteps();
   const i = currentIndex(steps);
   const step = steps[i];
-  if (!step || step.type !== "q") return;
+  if (!step) return;
   state.answers[step.prompt.key] = v;
   advanceFrom(i);
 }
@@ -472,17 +453,6 @@ app.addEventListener("click", async (e) => {
 
   if (action === "answer") return answer(Number(el.dataset.v));
   if (action === "back") return back();
-
-  if (action === "gate-open" || action === "gate-skip") {
-    const steps = buildSteps();
-    const step = steps[currentIndex(steps)];
-    if (!step || step.type !== "gate") return;
-    const catId = step.cat.id;
-    if (action === "gate-skip") state.skipped[catId] = true;
-    else delete state.skipped[catId];
-    const fresh = buildSteps();
-    return advanceFrom(fresh.findIndex((s) => s.id === step.id));
-  }
 
   if (action === "body") {
     state[el.dataset.field] = el.dataset.v;
@@ -505,7 +475,7 @@ app.addEventListener("click", async (e) => {
   }
 
   if (action === "first-open") {
-    const first = buildSteps().find((s) => s.type === "q" && state.answers[s.prompt.key] === undefined);
+    const first = buildSteps().find((s) => state.answers[s.prompt.key] === undefined);
     if (first) { state.at = first.id; save(); }
     return go("#quiz");
   }
@@ -573,7 +543,7 @@ document.addEventListener("keydown", (e) => {
   if (/^[1-5]$/.test(e.key)) {
     const steps = buildSteps();
     const step = steps[currentIndex(steps)];
-    if (step?.type === "q") { e.preventDefault(); answer(Number(e.key) - 1); }
+    if (step) { e.preventDefault(); answer(Number(e.key) - 1); }
   } else if (e.key === "Backspace" || e.key === "ArrowLeft") {
     e.preventDefault();
     back();
