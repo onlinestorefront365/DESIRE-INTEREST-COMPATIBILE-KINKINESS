@@ -1,4 +1,4 @@
-# SyncPulse
+# Take the Dick!
 
 A private couples quiz about sexual desires and kinks. Each partner answers on their own phone, then you swap a short code and see where you line up.
 
